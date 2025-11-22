@@ -1,0 +1,43 @@
+name: terraf
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - jupyterlab
+  - ipywidgets
+  - scikit-learn
+  - pyvista
+  - vtk
+  - pip
+  - pip:
+      - simpeg
+      - discretize
+      - pymatsolver
+      - pygimli
+      # - fatiando  # Comentado temporalmente por problemas de compatibilidad con Python 3.11
+      - pooch
+      - verde
+      - harmonica
+      - boule
+      - choclo
+      - ensaio
+      - empymod
+      - segyio
+      - lasio
+      - geemap
+      - rasterio
+      - antropy
+      - rich
+      - loguru
+      - sphinx
+      - sphinx-rtd-theme
+      - myst-parser
+      - jupytext
+      - black
+      - isort
+      - pre-commit
