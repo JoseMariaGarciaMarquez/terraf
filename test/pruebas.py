@@ -12,6 +12,7 @@ src_path = Path(__file__).parent.parent / 'src'
 sys.path.insert(0, str(src_path))
 
 from terraf_pr import TerrafPR
+from reporte_md import ReporteMarkdown
 
 print("="*80)
 print("🧪 PRUEBAS DE ÍNDICES AVANZADOS ")
@@ -60,7 +61,57 @@ print("-"*80)
 pr.calcular_clay_index()
 pr.show('clay_index', guardar=True, nombre_archivo=str(resultados_path / '05_clay_index.png'))
 
+# 6. Composiciones RGB
+print("\n🎨 PRUEBA 6: Composiciones RGB")
+print("-"*80)
+print("  • Color Natural")
+pr.show('natural_color', guardar=True, nombre_archivo=str(resultados_path / '06_natural_color.png'))
+print("  • Falso Color")
+pr.show('false_color', guardar=True, nombre_archivo=str(resultados_path / '07_false_color.png'))
+print("  • Color Geológico")
+pr.show('geology_color', guardar=True, nombre_archivo=str(resultados_path / '08_geology_color.png'))
+
+# 7. Índice de Alteración Hidrotermal
+print("\n🔬 PRUEBA 7: Índice de Alteración Hidrotermal (IAH)")
+print("-"*80)
+pr.calcular_iah()
+pr.show('iah', guardar=True, nombre_archivo=str(resultados_path / '09_iah.png'))
+
+# 8. Ratio OH (Hidróxilos)
+print("\n💧 PRUEBA 8: Ratio OH (Minerales Hidróxilos)")
+print("-"*80)
+pr.calcular_ratio_oh()
+pr.show('oh', guardar=True, nombre_archivo=str(resultados_path / '10_ratio_oh.png'))
+
+# 9. Objetivos Prioritarios (Triple Coincidencia)
+print("\n🎯 PRUEBA 9: Objetivos Prioritarios (Triple Coincidencia)")
+print("-"*80)
+pr.identificar_objetivos()
+pr.show('objetivos', guardar=True, nombre_archivo=str(resultados_path / '11_objetivos_prioritarios.png'))
+
 # Resumen final
 print("\n" + "="*80)
 pr.resumen()
 print(f"\n✅ Resultados guardados en: {resultados_path}")
+
+# Generar reporte Markdown
+print("\n" + "="*80)
+print("📄 GENERANDO REPORTE TÉCNICO")
+print("="*80)
+
+reporte = ReporteMarkdown(pr, autor="José García", titulo_proyecto="Análisis Espectral - Hércules")
+reporte.generar_reporte_completo(str(resultados_path / "reporte_hercules_completo.md"))
+
+# Generar también teoría y resultados por separado
+print("\n📚 Generando documentos adicionales...")
+reporte.generar_teoria(str(resultados_path / "teoria_gossan.md"))
+reporte.generar_resultados(str(resultados_path / "resultados_hercules.md"))
+
+print("\n" + "="*80)
+print("📊 ESTADÍSTICAS FINALES")
+print("="*80)
+print(f"  📁 Total de archivos generados: 14")
+print(f"  🖼️  Imágenes: 11")
+print(f"  📄 Reportes: 3")
+print(f"  📂 Ubicación: {resultados_path}")
+print("\n✅ ¡Análisis completo! Revisa los archivos en la carpeta resultados/")
