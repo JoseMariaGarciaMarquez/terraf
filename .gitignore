@@ -6,6 +6,9 @@ datos/**/*
 resultados/**/*.png
 !resultados/.gitkeep
 
+# Scripts personales de automatización (PyGithub, Discord bots, etc)
+scripts/
+
 # Imágenes satelitales
 *.TIF
 *.tif
