@@ -6,6 +6,28 @@ datos/**/*
 resultados/**/*.png
 !resultados/.gitkeep
 
+# Datos específicos de proyectos privados (Oaxaca, Santa Rita)
+resultados/*oaxaca*
+resultados/*santa_rita*
+resultados/*mapa_mag*
+resultados/*euler*
+resultados/fase*
+resultados/grids_*.npz
+resultados/magnetometria_combinada.csv
+resultados/geoquimica_combinada.csv
+resultados/minas_caracterizacion.json
+resultados/targets_*.csv
+resultados/reporte_exploracion.txt
+
+# Tests de proyectos específicos
+test/*oaxaca*
+test/*santa_rita*
+test/mapa*.html
+test/magnetometria_*.png
+test/mapas_*.png
+test/vegetacion_icesat2.png
+test/old_scripts/
+
 # Scripts personales de automatización (PyGithub, Discord bots, etc)
 scripts/
 
