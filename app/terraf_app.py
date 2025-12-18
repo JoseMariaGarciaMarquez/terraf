@@ -38,8 +38,14 @@ except (ImportError, AttributeError) as e:
     GEOPANDAS_AVAILABLE = False
     # Silenciar mensaje repetitivo
 
-# Agregar path para módulos
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+# Agregar path para módulos - funciona tanto local como en deploy
+import sys
+from pathlib import Path
+
+# Agregar directorio src al path
+src_path = Path(__file__).parent.parent / 'src'
+if src_path.exists():
+    sys.path.insert(0, str(src_path))
 
 try:
     from terraf_pr import TerrafPR
@@ -49,6 +55,7 @@ try:
 except ImportError as e:
     MODULES_LOADED = False
     st.error(f"⚠️ Error loading TERRAF modules: {e}")
+    st.info(f"Looking for modules in: {src_path}")
     st.info("Please ensure src/ directory is accessible")
 
 # ============================================================================
