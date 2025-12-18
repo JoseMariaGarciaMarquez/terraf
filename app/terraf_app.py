@@ -2,6 +2,7 @@
 TERRAF - Vista tipo Earth Engine con Mapa Central
 ==================================================
 Interfaz centrada en visualización geoespacial con mapa permanente
+Version: 2.0.1
 """
 
 import streamlit as st
