@@ -324,81 +324,136 @@ with st.sidebar:
     with st.expander("🛰️ LANDSAT DATA", expanded=False):
         st.markdown("### Load Landsat Scene")
         
-        # Buscar escenas en múltiples directorios
-        search_dirs = [
-            Path("datos/landsat9"),
-            Path("datos/downloaded")
-        ]
+        # Tabs para elegir fuente de datos
+        tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
         
-        all_scenes = []
-        scene_paths = {}  # Mapear nombre -> path completo
+        with tab1:
+            # Buscar escenas en múltiples directorios
+            search_dirs = [
+                Path("datos/landsat9"),
+                Path("datos/downloaded")
+            ]
+            
+            all_scenes = []
+            scene_paths = {}  # Mapear nombre -> path completo
+            
+            for base_dir in search_dirs:
+                if not base_dir.exists():
+                    continue
+                
+                # Buscar subdirectorios con archivos TIF
+                for item in base_dir.rglob("*"):
+                    if item.is_dir():
+                        tif_files = list(item.glob("*.TIF")) + list(item.glob("*.tif"))
+                        # Solo agregar si tiene archivos TIF (evitar carpetas vacías)
+                        if tif_files and len(tif_files) > 0:
+                            scene_name = item.name
+                            # Agregar etiqueta de ubicación
+                            if "downloaded" in str(item):
+                                display_name = f"📥 {scene_name}"
+                            else:
+                                display_name = f"📂 {scene_name}"
+                            all_scenes.append(display_name)
+                            scene_paths[display_name] = item
+                
+                # Buscar archivos HLS
+                hls_files = list(base_dir.glob("*.tif"))
+                if hls_files:
+                    hls_scenes = set()
+                    for f in hls_files:
+                        parts = f.stem.split('.')
+                        if len(parts) >= 4:
+                            scene_id = '.'.join(parts[:4])
+                            display_name = f"🌐 {scene_id}"
+                            hls_scenes.add(display_name)
+                            scene_paths[display_name] = base_dir
+                    all_scenes.extend(list(hls_scenes))
+            
+            if not all_scenes:
+                st.info("📂 No local scenes found in datos/landsat9 or datos/downloaded")
+            else:
+                selected_display = st.selectbox("Select Scene", sorted(all_scenes), key="local_landsat_select")
+                selected_scene_path = scene_paths[selected_display]
+                # Extraer nombre sin emoji para compatibilidad
+                selected_scene = selected_display.split(' ', 1)[1] if ' ' in selected_display else selected_display
+                
+                if st.button("📂 Load Local Scene", type="primary", key="load_landsat_btn"):
+                    with st.spinner("Loading Landsat data..."):
+                        try:
+                            # Usar el path que ya encontramos
+                            scene_path = selected_scene_path
+                            
+                            # Cargar escena
+                            pr = TerrafPR(str(scene_path))
+                            pr.cargar_bandas(reducir=True, factor=4)
+                            st.session_state.landsat_data = pr
+                            st.session_state.landsat_scene_name = selected_scene
+                            st.success(f"✅ Loaded {len(pr.bandas)} bands")
+                            
+                            # Limpiar flag de bounds para recentrar
+                            if 'landsat_bounds_calculated' in st.session_state:
+                                del st.session_state['landsat_bounds_calculated']
+                            
+                            st.rerun()
+                            
+                        except ValueError as e:
+                            st.error(f"❌ Format Error: {str(e)[:200]}")
+                            st.info("💡 Supported formats:\n- Landsat Level-1: *_B*.TIF\n- Landsat Level-2: *_SR_B*.TIF\n- HLS: HLS.L30.*.B*.tif")
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)[:200]}")
+                            import traceback
+                            st.code(traceback.format_exc()[:500])
         
-        for base_dir in search_dirs:
-            if not base_dir.exists():
-                continue
+        with tab2:
+            st.info("☁️ Upload Landsat band files (.TIF) from your computer")
+            uploaded_files = st.file_uploader(
+                "Select Landsat band files",
+                type=["tif", "TIF"],
+                accept_multiple_files=True,
+                key="landsat_uploader"
+            )
             
-            # Buscar subdirectorios con archivos TIF
-            for item in base_dir.rglob("*"):
-                if item.is_dir():
-                    tif_files = list(item.glob("*.TIF")) + list(item.glob("*.tif"))
-                    # Solo agregar si tiene archivos TIF (evitar carpetas vacías)
-                    if tif_files and len(tif_files) > 0:
-                        scene_name = item.name
-                        # Agregar etiqueta de ubicación
-                        if "downloaded" in str(item):
-                            display_name = f"📥 {scene_name}"
-                        else:
-                            display_name = f"📂 {scene_name}"
-                        all_scenes.append(display_name)
-                        scene_paths[display_name] = item
-            
-            # Buscar archivos HLS
-            hls_files = list(base_dir.glob("*.tif"))
-            if hls_files:
-                hls_scenes = set()
-                for f in hls_files:
-                    parts = f.stem.split('.')
-                    if len(parts) >= 4:
-                        scene_id = '.'.join(parts[:4])
-                        display_name = f"🌐 {scene_id}"
-                        hls_scenes.add(display_name)
-                        scene_paths[display_name] = base_dir
-                all_scenes.extend(list(hls_scenes))
-        
-        if not all_scenes:
-            st.info("No scenes found in datos/landsat9 or datos/downloaded")
-        else:
-            selected_display = st.selectbox("Select Scene", sorted(all_scenes))
-            selected_scene_path = scene_paths[selected_display]
-            # Extraer nombre sin emoji para compatibilidad
-            selected_scene = selected_display.split(' ', 1)[1] if ' ' in selected_display else selected_display
-            
-            if st.button("📂 Load Scene", type="primary", key="load_landsat_btn"):
-                with st.spinner("Loading Landsat data..."):
-                    try:
-                        # Usar el path que ya encontramos
-                        scene_path = selected_scene_path
-                        
-                        # Cargar escena
-                        pr = TerrafPR(str(scene_path))
-                        pr.cargar_bandas(reducir=True, factor=4)
-                        st.session_state.landsat_data = pr
-                        st.session_state.landsat_scene_name = selected_scene
-                        st.success(f"✅ Loaded {len(pr.bandas)} bands")
-                        
-                        # Limpiar flag de bounds para recentrar
-                        if 'landsat_bounds_calculated' in st.session_state:
-                            del st.session_state['landsat_bounds_calculated']
-                        
-                        st.rerun()
-                        
-                    except ValueError as e:
-                        st.error(f"❌ Format Error: {str(e)[:200]}")
-                        st.info("💡 Supported formats:\n- Landsat Level-1: *_B*.TIF\n- Landsat Level-2: *_SR_B*.TIF\n- HLS: HLS.L30.*.B*.tif")
-                    except Exception as e:
-                        st.error(f"❌ Error: {str(e)[:200]}")
-                        import traceback
-                        st.code(traceback.format_exc()[:500])    # ========================================================================
+            if uploaded_files:
+                st.write(f"📤 {len(uploaded_files)} files selected")
+                
+                # Mostrar preview de archivos
+                with st.expander("View uploaded files", expanded=False):
+                    for f in uploaded_files:
+                        st.text(f"• {f.name}")
+                
+                if st.button("☁️ Load Uploaded Scene", type="primary", key="load_uploaded_landsat"):
+                    with st.spinner("Processing uploaded files..."):
+                        try:
+                            # Crear directorio temporal para los archivos
+                            import tempfile
+                            temp_dir = Path(tempfile.mkdtemp())
+                            
+                            # Guardar archivos subidos
+                            for uploaded_file in uploaded_files:
+                                file_path = temp_dir / uploaded_file.name
+                                with open(file_path, "wb") as f:
+                                    f.write(uploaded_file.getbuffer())
+                            
+                            # Cargar escena desde directorio temporal
+                            pr = TerrafPR(str(temp_dir))
+                            pr.cargar_bandas(reducir=True, factor=4)
+                            st.session_state.landsat_data = pr
+                            st.session_state.landsat_scene_name = "Uploaded Scene"
+                            st.success(f"✅ Loaded {len(pr.bandas)} bands from uploaded files")
+                            
+                            # Limpiar flag de bounds para recentrar
+                            if 'landsat_bounds_calculated' in st.session_state:
+                                del st.session_state['landsat_bounds_calculated']
+                            
+                            st.rerun()
+                            
+                        except ValueError as e:
+                            st.error(f"❌ Format Error: {str(e)[:200]}")
+                            st.info("💡 Supported formats:\n- Landsat Level-1: *_B*.TIF\n- Landsat Level-2: *_SR_B*.TIF\n- HLS: HLS.L30.*.B*.tif")
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)[:200]}")
+                            import traceback
+                            st.code(traceback.format_exc()[:500])    # ========================================================================
     # SECCIÓN 3: ÍNDICES ESPECTRALES
     # ========================================================================
     if st.session_state.landsat_data is not None:
@@ -460,20 +515,120 @@ with st.sidebar:
                 st.session_state.mag_data = None
                 st.rerun()
         
-        mag_dir = Path("datos/magnetometria")
-        if mag_dir.exists():
-            shapefiles = list(mag_dir.rglob("*.shp"))
-            
-            if shapefiles:
-                shp_names = [f.name for f in shapefiles]
-                selected_shp = st.selectbox("Select shapefile", shp_names)
+        # Tabs para elegir fuente de datos
+        tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
+        
+        with tab1:
+            mag_dir = Path("datos/magnetometria")
+            if mag_dir.exists():
+                shapefiles = list(mag_dir.rglob("*.shp"))
                 
-                if st.button("📂 Load Magnetometry"):
-                    with st.spinner("Loading magnetic data..."):
+                if shapefiles:
+                    shp_names = [f.name for f in shapefiles]
+                    selected_shp = st.selectbox("Select shapefile", shp_names, key="local_mag_select")
+                    
+                    if st.button("📂 Load Local Magnetometry", key="load_local_mag"):
+                        with st.spinner("Loading magnetic data..."):
+                            try:
+                                shp_path = [f for f in shapefiles if f.name == selected_shp][0]
+                                
+                                # Cargar features con fiona (siempre funciona)
+                                features = []
+                                crs_info = None
+                                with fiona.open(str(shp_path), 'r') as src:
+                                    crs_info = src.crs
+                                    for feature in src:
+                                        features.append(feature)
+                                
+                                # Extraer propiedades para DataFrame
+                                records = [f['properties'] for f in features]
+                                df = pd.DataFrame(records)
+                                
+                                # Crear TerrafMag
+                                mag = TerrafMag(dataframe=df)
+                                mag._detectar_columnas()
+                                
+                                # Extraer coordenadas de geometrías para cache
+                                from shapely.geometry import shape
+                                coords_x = []
+                                coords_y = []
+                                for feature in features:
+                                    geom = shape(feature['geometry'])
+                                    centroid = geom.centroid
+                                    coords_x.append(centroid.x)
+                                    coords_y.append(centroid.y)
+                                
+                                # Guardar coordenadas en cache de TerrafMag
+                                mag._coords_cache = (np.array(coords_x), np.array(coords_y))
+                                
+                                # Guardar CRS
+                                mag._crs_info = crs_info
+                                
+                                if mag.campo_total is None:
+                                    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+                                    mag_col = st.selectbox("Select magnetic column", numeric_cols)
+                                    if st.button("Confirm", key="confirm_mag_col"):
+                                        mag.campo_total = df[mag_col].values
+                                        st.session_state.mag_data = {
+                                            'mag': mag,
+                                            'features': features,
+                                            'df': df,
+                                            'crs': crs_info
+                                        }
+                                        st.success("✅ Magnetometry loaded")
+                                else:
+                                    st.session_state.mag_data = {
+                                        'mag': mag,
+                                        'features': features,
+                                        'df': df,
+                                        'crs': crs_info
+                                    }
+                                    st.success(f"✅ {len(features)} features loaded | Campo: {mag.campo_total.min():.1f} - {mag.campo_total.max():.1f} nT")
+                                    
+                            except Exception as e:
+                                st.error(f"❌ Error: {e}")
+                else:
+                    st.warning("📂 No shapefiles in datos/magnetometria/")
+            else:
+                st.info("📂 Create folder: datos/magnetometria/")
+        
+        with tab2:
+            st.info("☁️ Upload shapefile components (.shp, .shx, .dbf, .prj) from your computer")
+            
+            uploaded_shp = st.file_uploader("Select .shp file", type=["shp"], key="mag_shp_uploader")
+            uploaded_shx = st.file_uploader("Select .shx file", type=["shx"], key="mag_shx_uploader")
+            uploaded_dbf = st.file_uploader("Select .dbf file", type=["dbf"], key="mag_dbf_uploader")
+            uploaded_prj = st.file_uploader("Select .prj file (optional)", type=["prj"], key="mag_prj_uploader")
+            
+            if uploaded_shp and uploaded_shx and uploaded_dbf:
+                st.success("✅ All required files uploaded")
+                
+                if st.button("☁️ Load Uploaded Magnetometry", type="primary", key="load_uploaded_mag"):
+                    with st.spinner("Processing uploaded shapefile..."):
                         try:
-                            shp_path = [f for f in shapefiles if f.name == selected_shp][0]
+                            # Crear directorio temporal
+                            import tempfile
+                            temp_dir = Path(tempfile.mkdtemp())
                             
-                            # Cargar features con fiona (siempre funciona)
+                            # Guardar archivos con el mismo nombre base
+                            base_name = "uploaded_mag"
+                            shp_path = temp_dir / f"{base_name}.shp"
+                            shx_path = temp_dir / f"{base_name}.shx"
+                            dbf_path = temp_dir / f"{base_name}.dbf"
+                            
+                            with open(shp_path, "wb") as f:
+                                f.write(uploaded_shp.getbuffer())
+                            with open(shx_path, "wb") as f:
+                                f.write(uploaded_shx.getbuffer())
+                            with open(dbf_path, "wb") as f:
+                                f.write(uploaded_dbf.getbuffer())
+                            
+                            if uploaded_prj:
+                                prj_path = temp_dir / f"{base_name}.prj"
+                                with open(prj_path, "wb") as f:
+                                    f.write(uploaded_prj.getbuffer())
+                            
+                            # Cargar features con fiona
                             features = []
                             crs_info = None
                             with fiona.open(str(shp_path), 'r') as src:
@@ -506,9 +661,10 @@ with st.sidebar:
                             mag._crs_info = crs_info
                             
                             if mag.campo_total is None:
+                                st.warning("⚠️ Could not auto-detect magnetic field column")
                                 numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-                                mag_col = st.selectbox("Select magnetic column", numeric_cols)
-                                if st.button("Confirm", key="confirm_mag_col"):
+                                mag_col = st.selectbox("Select magnetic column", numeric_cols, key="uploaded_mag_col")
+                                if st.button("Confirm Column", key="confirm_uploaded_mag_col"):
                                     mag.campo_total = df[mag_col].values
                                     st.session_state.mag_data = {
                                         'mag': mag,
@@ -516,7 +672,8 @@ with st.sidebar:
                                         'df': df,
                                         'crs': crs_info
                                     }
-                                    st.success("✅ Magnetometry loaded")
+                                    st.success("✅ Uploaded magnetometry loaded")
+                                    st.rerun()
                             else:
                                 st.session_state.mag_data = {
                                     'mag': mag,
@@ -524,14 +681,15 @@ with st.sidebar:
                                     'df': df,
                                     'crs': crs_info
                                 }
-                                st.success(f"✅ {len(features)} features loaded | Campo: {mag.campo_total.min():.1f} - {mag.campo_total.max():.1f} nT")
+                                st.success(f"✅ {len(features)} features loaded from upload | Campo: {mag.campo_total.min():.1f} - {mag.campo_total.max():.1f} nT")
+                                st.rerun()
                                 
                         except Exception as e:
-                            st.error(f"❌ Error: {e}")
+                            st.error(f"❌ Error loading shapefile: {e}")
+                            import traceback
+                            st.code(traceback.format_exc()[:500])
             else:
-                st.warning("No shapefiles in datos/magnetometria/")
-        else:
-            st.info("Create folder: datos/magnetometria/")
+                st.warning("⚠️ Please upload all required files (.shp, .shx, .dbf)")
     
     # Sección de cálculos magnéticos
     if st.session_state.mag_data is not None:
