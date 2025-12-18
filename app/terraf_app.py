@@ -67,6 +67,47 @@ except Exception as e:
     pass
 
 # ============================================================================
+# CHECK TEMPRANO PARA CLOUD - DETENER SI NO HAY MÓDULOS
+# ============================================================================
+if not MODULES_LOADED:
+    st.set_page_config(
+        page_title="TERRAF - Local Installation Required",
+        page_icon="⚠️",
+        layout="wide"
+    )
+    
+    st.error("⚠️ TERRAF Core Modules Not Available")
+    st.info("This application requires local installation of TERRAF modules.")
+    
+    st.markdown("""
+    ### 🚀 How to Run TERRAF Locally:
+    
+    1. **Clone the repository:**
+    ```bash
+    git clone https://github.com/terraf360/terraf.git
+    cd terraf
+    ```
+    
+    2. **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+    
+    3. **Run the app:**
+    ```bash
+    streamlit run app/terraf_app.py
+    ```
+    
+    ### 📌 Why Local Only?
+    
+    TERRAF requires custom modules (`TerrafPR`, `TerrafMag`, `TerrafDownload`) from the `src/` directory that are not accessible in Streamlit Cloud's environment.
+    
+    **Repository:** [github.com/terraf360/terraf](https://github.com/terraf360/terraf)
+    """)
+    
+    st.stop()
+
+# ============================================================================
 # FUNCIONES AUXILIARES
 # ============================================================================
 
@@ -279,36 +320,6 @@ if 'search_results' not in st.session_state:
 # ============================================================================
 with st.sidebar:
     st.markdown("# 🎛️ TERRAF Controls")
-    
-    # Mostrar advertencia si los módulos no están cargados
-    if not MODULES_LOADED:
-        st.error("⚠️ TERRAF Core Modules Not Available")
-        st.info("This app requires local installation of TERRAF modules (TerrafPR, TerrafMag, TerrafDownload).")
-        st.markdown("""
-        ### 🚀 To use TERRAF:
-        
-        1. Clone the repository:
-        ```bash
-        git clone https://github.com/terraf360/terraf.git
-        cd terraf
-        ```
-        
-        2. Install dependencies:
-        ```bash
-        pip install -r requirements.txt
-        ```
-        
-        3. Run locally:
-        ```bash
-        streamlit run app/terraf_app.py
-        ```
-        
-        **Note:** TERRAF requires the `src/` modules which are not available in Streamlit Cloud.
-        """)
-        st.stop()  # Stop execution here - don't render the rest
-    
-    # Si llegamos aquí, los módulos están cargados
-    st.success("✅ Modules loaded")
     
     st.markdown("---")
     
