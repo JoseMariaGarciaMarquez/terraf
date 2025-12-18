@@ -6,6 +6,17 @@ Version: 2.0.1
 """
 
 import streamlit as st
+
+# ============================================================================
+# PAGE CONFIG - DEBE SER LO PRIMERO
+# ============================================================================
+st.set_page_config(
+    page_title="TERRAF Map View",
+    page_icon="🗺️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import folium
 from streamlit_folium import st_folium
 import os
@@ -70,12 +81,6 @@ except Exception as e:
 # CHECK TEMPRANO PARA CLOUD - DETENER SI NO HAY MÓDULOS
 # ============================================================================
 if not MODULES_LOADED:
-    st.set_page_config(
-        page_title="TERRAF - Local Installation Required",
-        page_icon="⚠️",
-        layout="wide"
-    )
-    
     st.error("⚠️ TERRAF Core Modules Not Available")
     st.info("This application requires local installation of TERRAF modules.")
     
@@ -277,17 +282,6 @@ def crear_index_para_mapa(index_data, bounds, cmap='RdYlGn'):
     except Exception as e:
         st.error(f"Error creating index visualization: {e}")
         return None
-
-# ============================================================================
-# CONFIGURACIÓN
-# ============================================================================
-st.set_page_config(
-    page_title="TERRAF Map View",
-    page_icon="🗺️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 # ============================================================================
 # SESSION STATE - PERSISTENTE
 # ============================================================================
