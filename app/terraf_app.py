@@ -22,10 +22,14 @@ import os
 import sys
 from pathlib import Path
 
-# Agregar directorio src al path
-src_path = Path(__file__).parent.parent / 'src'
-if src_path.exists():
-    sys.path.insert(0, str(src_path))
+# Agregar directorios src al path - buscar tanto en raíz como en app/
+src_paths = [
+    Path(__file__).parent.parent / 'src',  # Para local: ../src
+    Path(__file__).parent / 'src',          # Para cloud: app/src
+]
+for src_path in src_paths:
+    if src_path.exists():
+        sys.path.insert(0, str(src_path))
 
 # Intentar importar módulos de TERRAF
 MODULES_LOADED = False
@@ -38,10 +42,11 @@ try:
     from terraf_mag import TerrafMag
     from terraf_download import TerrafDownload
     MODULES_LOADED = True
-except ImportError:
-    pass
-except Exception:
-    pass
+except ImportError as e:
+    # Mostrar error para debug
+    st.error(f"Import error: {e}")
+except Exception as e:
+    st.error(f"Error loading modules: {e}")
 
 # ============================================================================
 # CHECK TEMPRANO PARA CLOUD - DETENER SI NO HAY MÓDULOS
