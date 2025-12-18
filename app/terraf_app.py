@@ -1274,87 +1274,87 @@ with col_inspector:
             
             cloud_cover = st.slider("Max Cloud %", 0, 100, 20, key="search_cloud")
         
-        st.warning("⚠️ Automatic download requires authentication. Use 'Search Only' to find scenes, then download manually from USGS EarthExplorer.")
+            st.warning("⚠️ Automatic download requires authentication. Use 'Search Only' to find scenes, then download manually from USGS EarthExplorer.")
         
-        download_mode = st.radio("Mode", ["Search Only", "Search & Download"], key="download_mode")
-        data_source = st.selectbox("Source", ["Landsat (USGS)", "HLS", "Sentinel-2"], key="search_source")
+            download_mode = st.radio("Mode", ["Search Only", "Search & Download"], key="download_mode")
+            data_source = st.selectbox("Source", ["Landsat (USGS)", "HLS", "Sentinel-2"], key="search_source")
         
-        # Buscar escenas
-        if st.button("🔍 Search Scenes", type="primary"):
-            with st.spinner("Searching..."):
-                try:
-                    downloader = st.session_state.downloader
+            # Buscar escenas
+            if st.button("🔍 Search Scenes", type="primary"):
+                with st.spinner("Searching..."):
+                    try:
+                        downloader = st.session_state.downloader
                     
-                    if "Landsat" in data_source:
-                        # Usar AWS público para Landsat (sin autenticación)
-                        scenes = downloader.get_landsat_scenes_aws(
+                        if "Landsat" in data_source:
+                            # Usar AWS público para Landsat (sin autenticación)
+                            scenes = downloader.get_landsat_scenes_aws(
                             bbox=bbox,
                             start_date=start_date.strftime('%Y-%m-%d'),
                             end_date=end_date.strftime('%Y-%m-%d')
-                        )
-                        # Filtrar por cloud cover
-                        scenes = [s for s in scenes if s.get('cloud_cover', 100) <= cloud_cover]
-                    elif data_source == "HLS":
-                        # Usar Planetary Computer para HLS
-                        scenes = downloader.get_planetary_computer_scenes(
+                            )
+                            # Filtrar por cloud cover
+                            scenes = [s for s in scenes if s.get('cloud_cover', 100) <= cloud_cover]
+                        elif data_source == "HLS":
+                            # Usar Planetary Computer para HLS
+                            scenes = downloader.get_planetary_computer_scenes(
                             bbox=bbox,
                             start_date=start_date.strftime('%Y-%m-%d'),
                             end_date=end_date.strftime('%Y-%m-%d'),
                             collection='hls'
-                        )
-                        scenes = [s for s in scenes if s.get('cloud_cover', 100) <= cloud_cover]
-                    else:  # Sentinel-2
-                        scenes = downloader.get_planetary_computer_scenes(
+                            )
+                            scenes = [s for s in scenes if s.get('cloud_cover', 100) <= cloud_cover]
+                        else:  # Sentinel-2
+                            scenes = downloader.get_planetary_computer_scenes(
                             bbox=bbox,
                             start_date=start_date.strftime('%Y-%m-%d'),
                             end_date=end_date.strftime('%Y-%m-%d'),
                             collection='sentinel-2-l2a'
-                        )
-                        scenes = [s for s in scenes if s.get('cloud_cover', 100) <= cloud_cover]
+                            )
+                            scenes = [s for s in scenes if s.get('cloud_cover', 100) <= cloud_cover]
                     
-                    st.session_state.search_results = scenes
-                    st.rerun()
+                        st.session_state.search_results = scenes
+                        st.rerun()
                     
-                except Exception as e:
-                    st.error(f"❌ Search error: {str(e)}")
-                    import traceback
-                    st.code(traceback.format_exc())
-                    st.session_state.search_results = None
+                    except Exception as e:
+                        st.error(f"❌ Search error: {str(e)}")
+                        import traceback
+                        st.code(traceback.format_exc())
+                        st.session_state.search_results = None
         
-        # Mostrar resultados de búsqueda (siempre visibles si existen)
-        if 'search_results' in st.session_state and st.session_state.search_results:
-            scenes = st.session_state.search_results
-            st.success(f"✅ Found {len(scenes)} scenes")
+            # Mostrar resultados de búsqueda (siempre visibles si existen)
+            if 'search_results' in st.session_state and st.session_state.search_results:
+                scenes = st.session_state.search_results
+                st.success(f"✅ Found {len(scenes)} scenes")
             
-            if st.button("🗑️ Clear Results", key="clear_search"):
-                st.session_state.search_results = None
-                st.rerun()
+                if st.button("🗑️ Clear Results", key="clear_search"):
+                    st.session_state.search_results = None
+                    st.rerun()
             
-            if scenes:
-                # Tabla de resultados
-                scene_options = [f"{s['id']} | {s['date']} | ☁️{s.get('cloud_cover', 0):.1f}%" for s in scenes]
-                selected_scene_idx = st.selectbox("Select scene", range(len(scene_options)), format_func=lambda x: scene_options[x])
+                if scenes:
+                    # Tabla de resultados
+                    scene_options = [f"{s['id']} | {s['date']} | ☁️{s.get('cloud_cover', 0):.1f}%" for s in scenes]
+                    selected_scene_idx = st.selectbox("Select scene", range(len(scene_options)), format_func=lambda x: scene_options[x])
                 
-                selected_scene = scenes[selected_scene_idx]
+                    selected_scene = scenes[selected_scene_idx]
                 
-                # Mostrar enlaces de descarga manual
-                st.markdown("### 📥 Download Options")
+                    # Mostrar enlaces de descarga manual
+                    st.markdown("### 📥 Download Options")
                 
-                # Link a EarthExplorer
-                scene_id = selected_scene['id']
-                earthexplorer_url = f"https://earthexplorer.usgs.gov/"
-                st.markdown(f"**Manual Download (Recommended):**")
-                st.markdown(f"1. Go to [USGS EarthExplorer]({earthexplorer_url})")
-                st.markdown(f"2. Search for scene: `{scene_id}`")
-                st.markdown(f"3. Download to `datos/downloaded/{scene_id}/`")
-                st.markdown(f"4. Use 'Load Local Scene' in sidebar")
+                    # Link a EarthExplorer
+                    scene_id = selected_scene['id']
+                    earthexplorer_url = f"https://earthexplorer.usgs.gov/"
+                    st.markdown(f"**Manual Download (Recommended):**")
+                    st.markdown(f"1. Go to [USGS EarthExplorer]({earthexplorer_url})")
+                    st.markdown(f"2. Search for scene: `{scene_id}`")
+                    st.markdown(f"3. Download to `datos/downloaded/{scene_id}/`")
+                    st.markdown(f"4. Use 'Load Local Scene' in sidebar")
                 
-                st.markdown("---")
+                    st.markdown("---")
                 
-                # Botón de descarga automática (experimental)
-                if download_mode == "Search & Download":
-                    if st.button("🧪 Try Automatic Download (Experimental)", type="secondary"):
-                        with st.spinner(f"Downloading {selected_scene['id']}..."):
+                    # Botón de descarga automática (experimental)
+                    if download_mode == "Search & Download":
+                        if st.button("🧪 Try Automatic Download (Experimental)", type="secondary"):
+                            with st.spinner(f"Downloading {selected_scene['id']}..."):
                             try:
                                 downloader = st.session_state.downloader
                                 
