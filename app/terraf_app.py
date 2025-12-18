@@ -368,12 +368,16 @@ with st.sidebar:
     # SECCIÓN 2: DATOS LANDSAT
     # ========================================================================
     with st.expander("🛰️ LANDSAT DATA", expanded=False):
-        st.markdown("### Load Landsat Scene")
-        
-        # Tabs para elegir fuente de datos
-        tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
+        if not MODULES_LOADED:
+            st.warning("⚠️ Data loading features are not available in cloud mode")
+            st.info("TERRAF modules (TerrafPR, TerrafMag) require local installation")
+        else:
+            st.markdown("### Load Landsat Scene")
+            
+            # Tabs para elegir fuente de datos
+            tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
     
-        with tab1:
+            with tab1:
             # Buscar escenas en múltiples directorios
             search_dirs = [
                 Path("datos/landsat9"),
@@ -453,7 +457,7 @@ with st.sidebar:
                             import traceback
                             st.code(traceback.format_exc()[:500])
         
-        with tab2:
+            with tab2:
             st.info("☁️ Upload Landsat band files (.TIF) from your computer")
             uploaded_files = st.file_uploader(
                 "Select Landsat band files",
@@ -564,18 +568,22 @@ with st.sidebar:
     # SECCIÓN 4: MAGNETOMETRÍA
     # ========================================================================
     with st.expander("🧲 MAGNETOMETRY", expanded=False):
-        st.markdown("### Load Magnetic Data")
+        if not MODULES_LOADED:
+            st.warning("⚠️ Data loading features are not available in cloud mode")
+            st.info("TERRAF modules (TerrafPR, TerrafMag) require local installation")
+        else:
+            st.markdown("### Load Magnetic Data")
+            
+            # Botón para limpiar datos viejos
+            if st.session_state.mag_data is not None:
+                if st.button("🗑️ Clear Magnetometry", key="clear_mag"):
+                    st.session_state.mag_data = None
+                    st.rerun()
+            
+            # Tabs para elegir fuente de datos
+            tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
         
-        # Botón para limpiar datos viejos
-        if st.session_state.mag_data is not None:
-            if st.button("🗑️ Clear Magnetometry", key="clear_mag"):
-                st.session_state.mag_data = None
-                st.rerun()
-        
-        # Tabs para elegir fuente de datos
-        tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
-        
-        with tab1:
+            with tab1:
             mag_dir = Path("datos/magnetometria")
             if mag_dir.exists():
                 shapefiles = list(mag_dir.rglob("*.shp"))
@@ -652,7 +660,7 @@ with st.sidebar:
             else:
                 st.info("📂 Create folder: datos/magnetometria/")
         
-        with tab2:
+            with tab2:
             st.info("☁️ Upload shapefile components (.shp, .shx, .dbf, .prj) from your computer")
             
             uploaded_shp = st.file_uploader("Select .shp file", type=["shp"], key="mag_shp_uploader")
@@ -1239,28 +1247,32 @@ with col_inspector:
     
     # Mostrar sección de descarga
     with st.expander("📐 AREA OF INTEREST & DOWNLOAD", expanded=False):
-        # Usar AOI si existe, sino pedir manual
-        if 'aoi_bbox' in st.session_state:
-            bbox = st.session_state.aoi_bbox
-            st.success(f"✅ AOI: [{bbox[0]:.4f}, {bbox[1]:.4f}, {bbox[2]:.4f}, {bbox[3]:.4f}]")
+        if not MODULES_LOADED:
+            st.warning("⚠️ Download features are not available in cloud mode")
+            st.info("TerrafDownload module requires local installation")
         else:
-            st.info("👆 Draw area on map OR enter manually:")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                min_lon = st.number_input("Min Lon", value=-106.0, format="%.4f")
-                max_lon = st.number_input("Max Lon", value=-105.5, format="%.4f")
-            with col_b:
-                min_lat = st.number_input("Min Lat", value=28.0, format="%.4f")
-                max_lat = st.number_input("Max Lat", value=28.5, format="%.4f")
-            bbox = [min_lon, min_lat, max_lon, max_lat]
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.date_input("Start", value=pd.to_datetime("2023-01-01"), key="search_start")
-        with col2:
-            end_date = st.date_input("End", value=pd.to_datetime("2023-12-31"), key="search_end")
-        
-        cloud_cover = st.slider("Max Cloud %", 0, 100, 20, key="search_cloud")
+            # Usar AOI si existe, sino pedir manual
+            if 'aoi_bbox' in st.session_state:
+                bbox = st.session_state.aoi_bbox
+                st.success(f"✅ AOI: [{bbox[0]:.4f}, {bbox[1]:.4f}, {bbox[2]:.4f}, {bbox[3]:.4f}]")
+            else:
+                st.info("👆 Draw area on map OR enter manually:")
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    min_lon = st.number_input("Min Lon", value=-106.0, format="%.4f")
+                    max_lon = st.number_input("Max Lon", value=-105.5, format="%.4f")
+                with col_b:
+                    min_lat = st.number_input("Min Lat", value=28.0, format="%.4f")
+                    max_lat = st.number_input("Max Lat", value=28.5, format="%.4f")
+                bbox = [min_lon, min_lat, max_lon, max_lat]
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("Start", value=pd.to_datetime("2023-01-01"), key="search_start")
+            with col2:
+                end_date = st.date_input("End", value=pd.to_datetime("2023-12-31"), key="search_end")
+            
+            cloud_cover = st.slider("Max Cloud %", 0, 100, 20, key="search_cloud")
         
         st.warning("⚠️ Automatic download requires authentication. Use 'Search Only' to find scenes, then download manually from USGS EarthExplorer.")
         
