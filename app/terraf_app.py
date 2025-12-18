@@ -378,11 +378,11 @@ with st.sidebar:
             tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
     
             with tab1:
-            # Buscar escenas en múltiples directorios
-            search_dirs = [
-                Path("datos/landsat9"),
-                Path("datos/downloaded")
-            ]
+                # Buscar escenas en múltiples directorios
+                search_dirs = [
+                    Path("datos/landsat9"),
+                    Path("datos/downloaded")
+                ]
             
             all_scenes = []
             scene_paths = {}  # Mapear nombre -> path completo
@@ -458,8 +458,8 @@ with st.sidebar:
                             st.code(traceback.format_exc()[:500])
         
             with tab2:
-            st.info("☁️ Upload Landsat band files (.TIF) from your computer")
-            uploaded_files = st.file_uploader(
+                st.info("☁️ Upload Landsat band files (.TIF) from your computer")
+                uploaded_files = st.file_uploader(
                 "Select Landsat band files",
                 type=["tif", "TIF"],
                 accept_multiple_files=True,
@@ -584,86 +584,86 @@ with st.sidebar:
             tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
         
             with tab1:
-            mag_dir = Path("datos/magnetometria")
-            if mag_dir.exists():
-                shapefiles = list(mag_dir.rglob("*.shp"))
-                
-                if shapefiles:
-                    shp_names = [f.name for f in shapefiles]
-                    selected_shp = st.selectbox("Select shapefile", shp_names, key="local_mag_select")
+                mag_dir = Path("datos/magnetometria")
+                if mag_dir.exists():
+                    shapefiles = list(mag_dir.rglob("*.shp"))
                     
-                    if st.button("📂 Load Local Magnetometry", key="load_local_mag"):
-                        with st.spinner("Loading magnetic data..."):
-                            try:
-                                shp_path = [f for f in shapefiles if f.name == selected_shp][0]
-                                
-                                # Cargar features con fiona (siempre funciona)
-                                features = []
-                                crs_info = None
-                                with fiona.open(str(shp_path), 'r') as src:
-                                    crs_info = src.crs
-                                    for feature in src:
-                                        features.append(feature)
-                                
-                                # Extraer propiedades para DataFrame
-                                records = [f['properties'] for f in features]
-                                df = pd.DataFrame(records)
-                                
-                                # Crear TerrafMag
-                                mag = TerrafMag(dataframe=df)
-                                mag._detectar_columnas()
-                                
-                                # Activar capa de magnetometría automáticamente
-                                st.session_state.active_layers['magnetometry'] = True
-                                
-                                # Extraer coordenadas de geometrías para cache
-                                from shapely.geometry import shape
-                                coords_x = []
-                                coords_y = []
-                                for feature in features:
-                                    geom = shape(feature['geometry'])
-                                    centroid = geom.centroid
-                                    coords_x.append(centroid.x)
-                                    coords_y.append(centroid.y)
-                                
-                                # Guardar coordenadas en cache de TerrafMag
-                                mag._coords_cache = (np.array(coords_x), np.array(coords_y))
-                                
-                                # Guardar CRS
-                                mag._crs_info = crs_info
-                                
-                                if mag.campo_total is None:
-                                    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-                                    mag_col = st.selectbox("Select magnetic column", numeric_cols)
-                                    if st.button("Confirm", key="confirm_mag_col"):
-                                        mag.campo_total = df[mag_col].values
+                    if shapefiles:
+                        shp_names = [f.name for f in shapefiles]
+                        selected_shp = st.selectbox("Select shapefile", shp_names, key="local_mag_select")
+                        
+                        if st.button("📂 Load Local Magnetometry", key="load_local_mag"):
+                            with st.spinner("Loading magnetic data..."):
+                                try:
+                                    shp_path = [f for f in shapefiles if f.name == selected_shp][0]
+                                    
+                                    # Cargar features con fiona (siempre funciona)
+                                    features = []
+                                    crs_info = None
+                                    with fiona.open(str(shp_path), 'r') as src:
+                                        crs_info = src.crs
+                                        for feature in src:
+                                            features.append(feature)
+                                    
+                                    # Extraer propiedades para DataFrame
+                                    records = [f['properties'] for f in features]
+                                    df = pd.DataFrame(records)
+                                    
+                                    # Crear TerrafMag
+                                    mag = TerrafMag(dataframe=df)
+                                    mag._detectar_columnas()
+                                    
+                                    # Activar capa de magnetometría automáticamente
+                                    st.session_state.active_layers['magnetometry'] = True
+                                    
+                                    # Extraer coordenadas de geometrías para cache
+                                    from shapely.geometry import shape
+                                    coords_x = []
+                                    coords_y = []
+                                    for feature in features:
+                                        geom = shape(feature['geometry'])
+                                        centroid = geom.centroid
+                                        coords_x.append(centroid.x)
+                                        coords_y.append(centroid.y)
+                                    
+                                    # Guardar coordenadas en cache de TerrafMag
+                                    mag._coords_cache = (np.array(coords_x), np.array(coords_y))
+                                    
+                                    # Guardar CRS
+                                    mag._crs_info = crs_info
+                                    
+                                    if mag.campo_total is None:
+                                        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+                                        mag_col = st.selectbox("Select magnetic column", numeric_cols)
+                                        if st.button("Confirm", key="confirm_mag_col"):
+                                            mag.campo_total = df[mag_col].values
+                                            st.session_state.mag_data = {
+                                                'mag': mag,
+                                                'features': features,
+                                                'df': df,
+                                                'crs': crs_info
+                                            }
+                                            st.success("✅ Magnetometry loaded")
+                                    else:
                                         st.session_state.mag_data = {
                                             'mag': mag,
                                             'features': features,
                                             'df': df,
                                             'crs': crs_info
                                         }
-                                        st.success("✅ Magnetometry loaded")
-                                else:
-                                    st.session_state.mag_data = {
-                                        'mag': mag,
-                                        'features': features,
-                                        'df': df,
-                                        'crs': crs_info
-                                    }
-                                    st.success(f"✅ {len(features)} features loaded | Campo: {mag.campo_total.min():.1f} - {mag.campo_total.max():.1f} nT")
-                                    
-                            except Exception as e:
-                                st.error(f"❌ Error: {e}")
+                                        st.success(f"✅ {len(features)} features loaded | Campo: {mag.campo_total.min():.1f} - {mag.campo_total.max():.1f} nT")
+                                        
+                                except Exception as e:
+                                    st.error(f"❌ Error: {e}")
+                    else:
+                        st.warning("📂 No shapefiles in datos/magnetometria/")
                 else:
-                    st.warning("📂 No shapefiles in datos/magnetometria/")
-            else:
-                st.info("📂 Create folder: datos/magnetometria/")
+                    st.info("📂 Create folder: datos/magnetometria/")
         
             with tab2:
-            st.info("☁️ Upload shapefile components (.shp, .shx, .dbf, .prj) from your computer")
-            
-            uploaded_shp = st.file_uploader("Select .shp file", type=["shp"], key="mag_shp_uploader")
+                st.info("☁️ Upload shapefile components (.shp, .shx, .dbf, .prj) from your computer")
+                
+                uploaded_shp = st.file_uploader("Select .shp file", type=["shp"], key="mag_shp_uploader")
             uploaded_shx = st.file_uploader("Select .shx file", type=["shx"], key="mag_shx_uploader")
             uploaded_dbf = st.file_uploader("Select .dbf file", type=["dbf"], key="mag_dbf_uploader")
             uploaded_prj = st.file_uploader("Select .prj file (optional)", type=["prj"], key="mag_prj_uploader")
@@ -1355,54 +1355,54 @@ with col_inspector:
                     if download_mode == "Search & Download":
                         if st.button("🧪 Try Automatic Download (Experimental)", type="secondary"):
                             with st.spinner(f"Downloading {selected_scene['id']}..."):
-                            try:
-                                downloader = st.session_state.downloader
-                                
-                                if 'item' in selected_scene:
-                                    # Determinar fuente y usar método apropiado
-                                    source = selected_scene.get('source', 'unknown')
+                                try:
+                                    downloader = st.session_state.downloader
                                     
-                                    if source == 'aws':
-                                        # Descargar desde AWS (público, sin autenticación)
-                                        downloaded = downloader.download_from_aws(selected_scene)
-                                    elif source == 'planetary_computer':
-                                        # Descargar desde Planetary Computer (puede fallar)
-                                        downloaded = downloader.download_from_planetary_computer(selected_scene)
-                                    else:
-                                        # Intentar AWS por defecto
-                                        downloaded = downloader.download_from_aws(selected_scene)
-                                    
-                                    if downloaded and len(downloaded) > 0:
-                                        # Verificar que no sean archivos HTML de error
-                                        scene_path = downloader.output_dir / selected_scene['id']
-                                        first_file = list(scene_path.glob("*.TIF"))[0] if scene_path.exists() else None
+                                    if 'item' in selected_scene:
+                                        # Determinar fuente y usar método apropiado
+                                        source = selected_scene.get('source', 'unknown')
                                         
-                                        if first_file and first_file.stat().st_size < 100000:  # < 100KB es sospechoso
-                                            st.error("❌ Download failed - files are too small (likely HTML error pages)")
-                                            st.warning("⚠️ USGS requires authentication. Please use manual download from EarthExplorer.")
+                                        if source == 'aws':
+                                            # Descargar desde AWS (público, sin autenticación)
+                                            downloaded = downloader.download_from_aws(selected_scene)
+                                        elif source == 'planetary_computer':
+                                            # Descargar desde Planetary Computer (puede fallar)
+                                            downloaded = downloader.download_from_planetary_computer(selected_scene)
                                         else:
-                                            st.success(f"✅ Downloaded {len(downloaded)} files")
-                                            st.info(f"📂 Location: {scene_path}")
+                                            # Intentar AWS por defecto
+                                            downloaded = downloader.download_from_aws(selected_scene)
+                                        
+                                        if downloaded and len(downloaded) > 0:
+                                            # Verificar que no sean archivos HTML de error
+                                            scene_path = downloader.output_dir / selected_scene['id']
+                                            first_file = list(scene_path.glob("*.TIF"))[0] if scene_path.exists() else None
                                             
-                                            # Auto-cargar la escena descargada
-                                            if scene_path.exists():
-                                                pr = TerrafPR(str(scene_path))
-                                                pr.cargar_bandas(reducir=True, factor=4)
-                                                st.session_state.landsat_data = pr
-                                                st.session_state.landsat_scene_name = selected_scene['id']
-                                                # Activar capa RGB Natural automáticamente
-                                                st.session_state.active_layers['rgb_natural'] = True
-                                                st.success("✅ Scene loaded and ready!")
-                                                st.rerun()
+                                            if first_file and first_file.stat().st_size < 100000:  # < 100KB es sospechoso
+                                                st.error("❌ Download failed - files are too small (likely HTML error pages)")
+                                                st.warning("⚠️ USGS requires authentication. Please use manual download from EarthExplorer.")
+                                            else:
+                                                st.success(f"✅ Downloaded {len(downloaded)} files")
+                                                st.info(f"📂 Location: {scene_path}")
+                                                
+                                                # Auto-cargar la escena descargada
+                                                if scene_path.exists():
+                                                    pr = TerrafPR(str(scene_path))
+                                                    pr.cargar_bandas(reducir=True, factor=4)
+                                                    st.session_state.landsat_data = pr
+                                                    st.session_state.landsat_scene_name = selected_scene['id']
+                                                    # Activar capa RGB Natural automáticamente
+                                                    st.session_state.active_layers['rgb_natural'] = True
+                                                    st.success("✅ Scene loaded and ready!")
+                                                    st.rerun()
+                                        else:
+                                            st.error("❌ No files were downloaded. Check logs for details.")
                                     else:
-                                        st.error("❌ No files were downloaded. Check logs for details.")
-                                else:
-                                    st.warning("⚠️ Download not implemented for this source yet")
-                                    
-                            except Exception as e:
-                                st.error(f"❌ Download error: {str(e)}")
-                                import traceback
-                                st.code(traceback.format_exc())
+                                        st.warning("⚠️ Download not implemented for this source yet")
+                                        
+                                except Exception as e:
+                                    st.error(f"❌ Download error: {str(e)}")
+                                    import traceback
+                                    st.code(traceback.format_exc())
     
     st.markdown("---")
     
