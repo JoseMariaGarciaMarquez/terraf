@@ -366,13 +366,12 @@ with st.sidebar:
     # ========================================================================
     # SECCIÓN 2: DATOS LANDSAT
     # ========================================================================
-    if MODULES_LOADED:
-        with st.expander("🛰️ LANDSAT DATA", expanded=False):
-            st.markdown("### Load Landsat Scene")
-            
-            # Tabs para elegir fuente de datos
-            tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
+    with st.expander("🛰️ LANDSAT DATA", expanded=False):
+        st.markdown("### Load Landsat Scene")
         
+        # Tabs para elegir fuente de datos
+        tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
+    
         with tab1:
             # Buscar escenas en múltiples directorios
             search_dirs = [
@@ -513,7 +512,7 @@ with st.sidebar:
     # ========================================================================
     # SECCIÓN 3: ÍNDICES ESPECTRALES
     # ========================================================================
-    if MODULES_LOADED and st.session_state.landsat_data is not None:
+    if st.session_state.landsat_data is not None and MODULES_LOADED:
         with st.expander("🔥 SPECTRAL INDICES", expanded=False):
             st.markdown("### Calculate Indices")
             
@@ -563,8 +562,7 @@ with st.sidebar:
     # ========================================================================
     # SECCIÓN 4: MAGNETOMETRÍA
     # ========================================================================
-    if MODULES_LOADED:
-        with st.expander("🧲 MAGNETOMETRY", expanded=False):
+    with st.expander("🧲 MAGNETOMETRY", expanded=False):
         st.markdown("### Load Magnetic Data")
         
         # Botón para limpiar datos viejos
