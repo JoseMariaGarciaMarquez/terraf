@@ -282,22 +282,33 @@ with st.sidebar:
     
     # Mostrar advertencia si los módulos no están cargados
     if not MODULES_LOADED:
-        st.warning("⚠️ TERRAF modules not available")
-        st.info("The app is running in limited mode. Data loading features are disabled.")
-        with st.expander("ℹ️ More info"):
-            st.markdown(f"""
-            **Module path:** `{src_path}`
-            
-            **Status:** Modules could not be imported
-            
-            **Available features:**
-            - Map visualization ✅
-            - Layer management ✅
-            
-            **Unavailable features:**
-            - Data loading ❌
-            - Processing ❌
-            """)
+        st.error("⚠️ TERRAF Core Modules Not Available")
+        st.info("This app requires local installation of TERRAF modules (TerrafPR, TerrafMag, TerrafDownload).")
+        st.markdown("""
+        ### 🚀 To use TERRAF:
+        
+        1. Clone the repository:
+        ```bash
+        git clone https://github.com/terraf360/terraf.git
+        cd terraf
+        ```
+        
+        2. Install dependencies:
+        ```bash
+        pip install -r requirements.txt
+        ```
+        
+        3. Run locally:
+        ```bash
+        streamlit run app/terraf_app.py
+        ```
+        
+        **Note:** TERRAF requires the `src/` modules which are not available in Streamlit Cloud.
+        """)
+        st.stop()  # Stop execution here - don't render the rest
+    
+    # Si llegamos aquí, los módulos están cargados
+    st.success("✅ Modules loaded")
     
     st.markdown("---")
     
