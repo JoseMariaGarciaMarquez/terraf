@@ -13,7 +13,8 @@ import warnings
 
 # Silenciar warnings molestos
 warnings.filterwarnings('ignore')
-os.environ['PROJ_LIB'] = ''  # Evitar búsqueda de proj.db
+# No modificar PROJ_LIB en producción para evitar conflictos
+# os.environ['PROJ_LIB'] = ''  
 
 import rasterio
 from rasterio.plot import show
@@ -39,9 +40,16 @@ except (ImportError, AttributeError) as e:
 
 # Agregar path para módulos
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-from terraf_pr import TerrafPR
-from terraf_mag import TerrafMag
-from terraf_download import TerrafDownload
+
+try:
+    from terraf_pr import TerrafPR
+    from terraf_mag import TerrafMag
+    from terraf_download import TerrafDownload
+    MODULES_LOADED = True
+except ImportError as e:
+    MODULES_LOADED = False
+    st.error(f"⚠️ Error loading TERRAF modules: {e}")
+    st.info("Please ensure src/ directory is accessible")
 
 # ============================================================================
 # FUNCIONES AUXILIARES
@@ -244,7 +252,10 @@ if 'prevent_rerun' not in st.session_state:
 if 'map_rendered' not in st.session_state:
     st.session_state.map_rendered = False
 if 'downloader' not in st.session_state:
-    st.session_state.downloader = TerrafDownload()
+    if MODULES_LOADED:
+        st.session_state.downloader = TerrafDownload()
+    else:
+        st.session_state.downloader = None
 if 'search_results' not in st.session_state:
     st.session_state.search_results = None
 
@@ -456,10 +467,15 @@ with st.sidebar:
                         except ValueError as e:
                             st.error(f"❌ Format Error: {str(e)[:200]}")
                             st.info("💡 Supported formats:\n- Landsat Level-1: *_B*.TIF\n- Landsat Level-2: *_SR_B*.TIF\n- HLS: HLS.L30.*.B*.tif")
+                            import traceback
+                            with st.expander("Ver detalles del error"):
+                                st.code(traceback.format_exc())
                         except Exception as e:
                             st.error(f"❌ Error: {str(e)[:200]}")
                             import traceback
-                            st.code(traceback.format_exc()[:500])    # ========================================================================
+                            with st.expander("Ver detalles del error"):
+                                st.code(traceback.format_exc())
+    # ========================================================================
     # SECCIÓN 3: ÍNDICES ESPECTRALES
     # ========================================================================
     if st.session_state.landsat_data is not None:
