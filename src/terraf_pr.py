@@ -89,37 +89,105 @@ class TerrafPR:
     def detectar_bandas(self) -> Dict[str, str]:
         """
         Detecta automáticamente archivos de bandas Landsat
+        Soporta múltiples formatos:
+        - Landsat Level-2: *_SR_B*.TIF
+        - Landsat Level-1: *_B*.TIF  
+        - HLS Landsat: HLS.L30.*.B*.tif
         
         Returns:
             Diccionario con {banda: ruta_archivo}
         """
         print("🔍 Detectando bandas Landsat...")
         
+        # Buscar archivos .TIF y .tif (recursivamente)
         archivos_tif = glob.glob(os.path.join(self.carpeta, "*.TIF"))
+        archivos_tif += glob.glob(os.path.join(self.carpeta, "*.tif"))
+        
+        # Si no hay archivos, buscar en subdirectorios
+        if not archivos_tif:
+            archivos_tif = glob.glob(os.path.join(self.carpeta, "**", "*.TIF"), recursive=True)
+            archivos_tif += glob.glob(os.path.join(self.carpeta, "**", "*.tif"), recursive=True)
         
         if not archivos_tif:
-            raise FileNotFoundError(f"No se encontraron archivos .TIF en {self.carpeta}")
+            raise FileNotFoundError(f"No se encontraron archivos .TIF/.tif en {self.carpeta}")
         
         bandas_encontradas = {}
+        tipo = "Unknown"
         
-        # Intentar Level-2 (_SR_B*.TIF)
-        for i in range(1, 12):
-            matches = [f for f in archivos_tif if f"_SR_B{i}.TIF" in f]
-            if matches:
-                bandas_encontradas[f'B{i}'] = matches[0]
+        # OPCIÓN 1: HLS Landsat (HLS.L30.T13RDN.2023002T173419.v2.0.B01.tif)
+        hls_files = [f for f in archivos_tif if 'HLS.L30.' in f or 'HLS.S30.' in f]
+        tipo = "Unknown"
+        if hls_files:
+            print("  📡 Formato detectado: HLS (Harmonized Landsat Sentinel-2)")
+            
+            # Verificar si hay un filtro de escena específica (desde session_state de streamlit)
+            scene_filter = None
+            try:
+                import streamlit as st
+                if 'hls_scene_filter' in st.session_state:
+                    scene_filter = st.session_state.hls_scene_filter
+                    print(f"    🔍 Filtrando por escena: {scene_filter}")
+            except:
+                pass  # No estamos en Streamlit o no hay filtro
+            
+            # Identificar escenas disponibles
+            scene_ids = {}
+            for f in hls_files:
+                parts = os.path.basename(f).split('.')
+                if len(parts) >= 5:
+                    scene_id = '.'.join(parts[:4])  # HLS.L30.T13RDN.2023002T173419
+                    
+                    # Si hay filtro, solo procesar archivos de esa escena
+                    if scene_filter and scene_id != scene_filter:
+                        continue
+                    
+                    if scene_id not in scene_ids:
+                        scene_ids[scene_id] = []
+                    scene_ids[scene_id].append(f)
+            
+            # Usar la primera escena encontrada (o la filtrada)
+            if scene_ids:
+                first_scene = list(scene_ids.keys())[0]
+                scene_files = scene_ids[first_scene]
+                print(f"    📍 Escena: {first_scene} ({len(scene_files)} archivos)")
+                
+                for i in range(1, 12):
+                    # HLS usa B01, B02, etc. (con cero)
+                    matches = [f for f in scene_files if f".B{i:02d}.tif" in f]
+                    if matches:
+                        bandas_encontradas[f'B{i:02d}'] = matches[0]
+                    # También buscar sin cero (B1, B2...)
+                    matches_alt = [f for f in scene_files if f".B{i}.tif" in f and f".B{i:02d}." not in f]
+                    if matches_alt and f'B{i:02d}' not in bandas_encontradas:
+                        bandas_encontradas[f'B{i:02d}'] = matches_alt[0]
+            tipo = "HLS L30"
         
-        # Si no hay Level-2, intentar Level-1 (_B*.TIF)
+        # OPCIÓN 2: Landsat Level-2 (_SR_B*.TIF)
+        if not bandas_encontradas:
+            for i in range(1, 12):
+                matches = [f for f in archivos_tif if f"_SR_B{i}.TIF" in f]
+                if matches:
+                    bandas_encontradas[f'B{i:02d}'] = matches[0]
+            if bandas_encontradas:
+                tipo = "Landsat Level-2 SR"
+        
+        # OPCIÓN 3: Landsat Level-1 (_B*.TIF)
         if not bandas_encontradas:
             for i in range(1, 12):
                 matches = [f for f in archivos_tif if f"_B{i}.TIF" in f and "_SR_B" not in f]
                 if matches:
-                    bandas_encontradas[f'B{i}'] = matches[0]
+                    bandas_encontradas[f'B{i:02d}'] = matches[0]
+            if bandas_encontradas:
+                tipo = "Landsat Level-1"
         
         if not bandas_encontradas:
-            raise ValueError("No se pudieron detectar bandas con formato Landsat estándar")
-        
-        # Determinar tipo
-        tipo = "Level-2 SR" if '_SR_B' in list(bandas_encontradas.values())[0] else "Level-1"
+            raise ValueError(
+                "No se pudieron detectar bandas.\n"
+                "Formatos soportados:\n"
+                "  - Landsat Level-2: *_SR_B*.TIF\n"
+                "  - Landsat Level-1: *_B*.TIF\n"
+                "  - HLS: HLS.L30.*.B*.tif"
+            )
         
         print(f"  ✅ Tipo: {tipo}")
         print(f"  ✅ Bandas: {', '.join(sorted(bandas_encontradas.keys()))}")
@@ -162,12 +230,25 @@ class TerrafPR:
                 else:
                     banda = src.read(1).astype(float)
                 
+                # Guardar con ambos formatos (B01 y B1) para compatibilidad
                 self.bandas[banda_nombre] = banda
+                # También agregar alias sin cero (B04 -> B4)
+                if banda_nombre.startswith('B0'):
+                    alias = 'B' + banda_nombre[2:]
+                    self.bandas[alias] = banda
                 
                 # Guardar metadatos
                 if not self.metadatos:
+                    # Si se redujo la imagen, ajustar el transform
+                    if reducir and factor > 1:
+                        # Escalar el tamaño de píxel
+                        original_transform = src.transform
+                        scaled_transform = original_transform * original_transform.scale(factor, factor)
+                    else:
+                        scaled_transform = src.transform
+                    
                     self.metadatos = {
-                        'transform': src.transform,
+                        'transform': scaled_transform,
                         'crs': src.crs,
                         'width': banda.shape[1],
                         'height': banda.shape[0],
@@ -182,6 +263,57 @@ class TerrafPR:
         
         return self
     
+    
+    def _crear_mascara_valida(self, *bandas_nombres):
+        """
+        Crea máscara de datos válidos para múltiples bandas.
+        Retorna True donde TODAS las bandas tienen valores > 0 y no son NaN.
+        
+        Args:
+            *bandas_nombres: Nombres de las bandas (ej: 'B2', 'B4', 'B6')
+        
+        Returns:
+            np.ndarray: Máscara booleana
+        """
+        mask = np.ones(self.bandas[bandas_nombres[0]].shape, dtype=bool)
+        for banda_nombre in bandas_nombres:
+            if banda_nombre not in self.bandas:
+                raise ValueError(f"Banda {banda_nombre} no encontrada")
+            mask &= (self.bandas[banda_nombre] > 0) & (~np.isnan(self.bandas[banda_nombre]))
+        return mask
+    
+    def _calcular_ratio(self, numerador, denominador, nombre_resultado, tipo='ratio'):
+        """
+        Función reutilizable para calcular ratios o índices de manera eficiente.
+        
+        Args:
+            numerador: Expresión del numerador (puede ser banda simple o operación)
+            denominador: Expresión del denominador
+            nombre_resultado: Nombre para guardar el resultado
+            tipo: 'ratio' o 'indice' (determina donde se guarda)
+        
+        Returns:
+            np.ndarray: Resultado del cálculo
+        """
+        # Evaluar expresiones (puede ser simple banda o operación)
+        num = numerador if isinstance(numerador, np.ndarray) else numerador
+        den = denominador if isinstance(denominador, np.ndarray) else denominador
+        
+        # Crear máscara de datos válidos
+        mask = (num > 0) & (den != 0) & (~np.isnan(num)) & (~np.isnan(den))
+        
+        # Calcular ratio con máscara
+        resultado = np.divide(num, den,
+                            out=np.full_like(num, np.nan, dtype=float),
+                            where=mask)
+        
+        # Guardar resultado
+        if tipo == 'ratio':
+            self.ratios[nombre_resultado] = resultado
+        else:
+            self.indices[nombre_resultado] = resultado
+        
+        return resultado
     
     def _normalizar(self, banda: np.ndarray, percentiles: Tuple[int, int] = (2, 98)) -> np.ndarray:
         """Normaliza banda al rango 0-1"""
@@ -247,17 +379,13 @@ class TerrafPR:
     
     
     def calcular_ratio_argilica(self):
-        """Calcula ratio B6/B7 para alteración argílica (arcillas)"""
+        """Calcula B6/B7 (arcillas y minerales OH)"""
         if not all(b in self.bandas for b in ['B6', 'B7']):
             raise ValueError("Faltan bandas B6, B7")
         
-        print("💎 Calculando Ratio B6/B7 - Alteración Argílica...")
+        print("🔬 Calculando Ratio B6/B7 - Alteración Argílica...")
         
-        ratio = np.divide(self.bandas['B6'], self.bandas['B7'],
-                         out=np.zeros_like(self.bandas['B6']),
-                         where=self.bandas['B7'] != 0)
-        
-        self.ratios['argilica'] = ratio
+        ratio = self._calcular_ratio(self.bandas['B6'], self.bandas['B7'], 'argilica', tipo='ratio')
         
         # Zona de anomalía
         umbral = np.nanpercentile(ratio[ratio > 0], 85)
@@ -274,17 +402,13 @@ class TerrafPR:
     
     
     def calcular_ratio_oxidos(self):
-        """Calcula ratio B4/B2 para óxidos de hierro"""
+        """Calcula B4/B2 (óxidos de hierro)"""
         if not all(b in self.bandas for b in ['B2', 'B4']):
             raise ValueError("Faltan bandas B2, B4")
         
-        print("🏔️  Calculando Ratio B4/B2 - Óxidos de Hierro...")
+        print("🟠 Calculando Ratio B4/B2 - Óxidos de Hierro...")
         
-        ratio = np.divide(self.bandas['B4'], self.bandas['B2'],
-                         out=np.zeros_like(self.bandas['B4']),
-                         where=self.bandas['B2'] != 0)
-        
-        self.ratios['oxidos'] = ratio
+        ratio = self._calcular_ratio(self.bandas['B4'], self.bandas['B2'], 'oxidos', tipo='ratio')
         
         # Zona de anomalía
         umbral = np.nanpercentile(ratio[ratio > 0], 80)
@@ -321,17 +445,13 @@ class TerrafPR:
     
     
     def calcular_propilitica(self):
-        """Calcula ratio B5/B6 para alteración propilítica"""
+        """Calcula B5/B6 (alteración propilítica)"""
         if not all(b in self.bandas for b in ['B5', 'B6']):
             raise ValueError("Faltan bandas B5, B6")
         
         print("🌿 Calculando Ratio B5/B6 - Alteración Propilítica...")
         
-        ratio = np.divide(self.bandas['B5'], self.bandas['B6'],
-                         out=np.zeros_like(self.bandas['B5']),
-                         where=self.bandas['B6'] != 0)
-        
-        self.ratios['propilitica'] = ratio
+        ratio = self._calcular_ratio(self.bandas['B5'], self.bandas['B6'], 'propilitica', tipo='indice')
         
         # Zona de anomalía
         umbral = np.nanpercentile(ratio[ratio > 0], 75)
@@ -354,12 +474,9 @@ class TerrafPR:
         
         print("🪨 Calculando Índice de Carbonatos...")
         
-        indice = np.divide(self.bandas['B6'], 
-                          self.bandas['B6'] + self.bandas['B7'],
-                          out=np.zeros_like(self.bandas['B6']),
-                          where=(self.bandas['B6'] + self.bandas['B7']) != 0)
-        
-        self.indices['carbonatos'] = indice
+        indice = self._calcular_ratio(self.bandas['B6'], 
+                                      self.bandas['B6'] + self.bandas['B7'], 
+                                      'carbonatos', tipo='indice')
         
         # Zona de anomalía (valores bajos indican carbonatos)
         umbral = np.nanpercentile(indice[indice > 0], 30)
@@ -382,12 +499,9 @@ class TerrafPR:
         
         print("🌱 Calculando NDVI - Índice de Vegetación...")
         
-        ndvi = np.divide(self.bandas['B5'] - self.bandas['B4'],
-                        self.bandas['B5'] + self.bandas['B4'],
-                        out=np.zeros_like(self.bandas['B5']),
-                        where=(self.bandas['B5'] + self.bandas['B4']) != 0)
-        
-        self.indices['ndvi'] = ndvi
+        ndvi = self._calcular_ratio(self.bandas['B5'] - self.bandas['B4'],
+                                   self.bandas['B5'] + self.bandas['B4'],
+                                   'ndvi', tipo='indice')
         
         # Clasificación
         vegetacion_densa = ndvi > 0.6
@@ -447,12 +561,9 @@ class TerrafPR:
         
         print("🧱 Calculando Clay Index (Índice de Arcillas Mejorado)...")
         
-        indice = np.divide(self.bandas['B6'] * self.bandas['B6'],
-                          self.bandas['B7'] * self.bandas['B5'],
-                          out=np.zeros_like(self.bandas['B6']),
-                          where=(self.bandas['B7'] * self.bandas['B5']) != 0)
-        
-        self.indices['clay_index'] = indice
+        indice = self._calcular_ratio(self.bandas['B6'] * self.bandas['B6'],
+                                     self.bandas['B7'] * self.bandas['B5'],
+                                     'clay', tipo='indice')
         
         # Zona de anomalía
         umbral = np.nanpercentile(indice[indice > 0], 85)

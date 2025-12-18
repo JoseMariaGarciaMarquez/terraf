@@ -16,7 +16,7 @@ class ReporteMarkdown:
     """
     Genera reportes técnicos en Markdown desde análisis TerrafPR
     
-    Uso:
+    Uso:    
         pr = TerrafPR("datos/", "MiProyecto")
         pr.analisis_completo()
         

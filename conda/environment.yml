@@ -13,6 +13,8 @@ dependencies:
   - scikit-learn
   - pyvista
   - vtk
+  - geopandas
+  - h5py
   - pip
   - pip:
       - simpeg
@@ -41,3 +43,7 @@ dependencies:
       - black
       - isort
       - pre-commit
+      - icepyx  # ICESat-2 data access and processing
+      - streamlit
+      - folium
+      - streamlit-folium
