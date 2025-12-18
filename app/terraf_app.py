@@ -17,40 +17,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-import folium
-from streamlit_folium import st_folium
+# Imports básicos necesarios para todo
 import os
-import numpy as np
-import warnings
-
-# Silenciar warnings molestos
-warnings.filterwarnings('ignore')
-# No modificar PROJ_LIB en producción para evitar conflictos
-# os.environ['PROJ_LIB'] = ''  
-
-import rasterio
-from rasterio.plot import show
-from rasterio.transform import from_bounds
-from matplotlib import pyplot as plt
-from matplotlib import cm
-import sys
-import json
-from pathlib import Path
-import pandas as pd
-import fiona
-from PIL import Image
-import io
-import base64
-from io import BytesIO
-
-try:
-    import geopandas as gpd
-    GEOPANDAS_AVAILABLE = True
-except (ImportError, AttributeError) as e:
-    GEOPANDAS_AVAILABLE = False
-    # Silenciar mensaje repetitivo
-
-# Agregar path para módulos - funciona tanto local como en deploy
 import sys
 from pathlib import Path
 
@@ -59,7 +27,7 @@ src_path = Path(__file__).parent.parent / 'src'
 if src_path.exists():
     sys.path.insert(0, str(src_path))
 
-# Importar módulos de forma segura
+# Intentar importar módulos de TERRAF
 MODULES_LOADED = False
 TerrafPR = None
 TerrafMag = None
@@ -70,11 +38,9 @@ try:
     from terraf_mag import TerrafMag
     from terraf_download import TerrafDownload
     MODULES_LOADED = True
-except ImportError as e:
-    # No crashear si los módulos no están disponibles
+except ImportError:
     pass
-except Exception as e:
-    # Capturar cualquier otro error
+except Exception:
     pass
 
 # ============================================================================
@@ -111,6 +77,37 @@ if not MODULES_LOADED:
     """)
     
     st.stop()
+
+# ============================================================================
+# IMPORTS COMPLETOS (solo después de verificar módulos)
+# ============================================================================
+
+import folium
+from streamlit_folium import st_folium
+import numpy as np
+import warnings
+
+# Silenciar warnings molestos
+warnings.filterwarnings('ignore')
+
+import rasterio
+from rasterio.plot import show
+from rasterio.transform import from_bounds
+from matplotlib import pyplot as plt
+from matplotlib import cm
+import json
+import pandas as pd
+import fiona
+from PIL import Image
+import io
+import base64
+from io import BytesIO
+
+try:
+    import geopandas as gpd
+    GEOPANDAS_AVAILABLE = True
+except (ImportError, AttributeError):
+    GEOPANDAS_AVAILABLE = False
 
 # ============================================================================
 # FUNCIONES AUXILIARES
