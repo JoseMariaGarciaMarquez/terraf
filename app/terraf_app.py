@@ -47,16 +47,23 @@ src_path = Path(__file__).parent.parent / 'src'
 if src_path.exists():
     sys.path.insert(0, str(src_path))
 
+# Importar módulos de forma segura
+MODULES_LOADED = False
+TerrafPR = None
+TerrafMag = None
+TerrafDownload = None
+
 try:
     from terraf_pr import TerrafPR
     from terraf_mag import TerrafMag
     from terraf_download import TerrafDownload
     MODULES_LOADED = True
 except ImportError as e:
-    MODULES_LOADED = False
-    st.error(f"⚠️ Error loading TERRAF modules: {e}")
-    st.info(f"Looking for modules in: {src_path}")
-    st.info("Please ensure src/ directory is accessible")
+    # No crashear si los módulos no están disponibles
+    pass
+except Exception as e:
+    # Capturar cualquier otro error
+    pass
 
 # ============================================================================
 # FUNCIONES AUXILIARES
@@ -271,6 +278,26 @@ if 'search_results' not in st.session_state:
 # ============================================================================
 with st.sidebar:
     st.markdown("# 🎛️ TERRAF Controls")
+    
+    # Mostrar advertencia si los módulos no están cargados
+    if not MODULES_LOADED:
+        st.warning("⚠️ TERRAF modules not available")
+        st.info("The app is running in limited mode. Data loading features are disabled.")
+        with st.expander("ℹ️ More info"):
+            st.markdown(f"""
+            **Module path:** `{src_path}`
+            
+            **Status:** Modules could not be imported
+            
+            **Available features:**
+            - Map visualization ✅
+            - Layer management ✅
+            
+            **Unavailable features:**
+            - Data loading ❌
+            - Processing ❌
+            """)
+    
     st.markdown("---")
     
     # ========================================================================
@@ -339,11 +366,12 @@ with st.sidebar:
     # ========================================================================
     # SECCIÓN 2: DATOS LANDSAT
     # ========================================================================
-    with st.expander("🛰️ LANDSAT DATA", expanded=False):
-        st.markdown("### Load Landsat Scene")
-        
-        # Tabs para elegir fuente de datos
-        tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
+    if MODULES_LOADED:
+        with st.expander("🛰️ LANDSAT DATA", expanded=False):
+            st.markdown("### Load Landsat Scene")
+            
+            # Tabs para elegir fuente de datos
+            tab1, tab2 = st.tabs(["📁 Local Files", "☁️ Upload Files"])
         
         with tab1:
             # Buscar escenas en múltiples directorios
@@ -485,7 +513,7 @@ with st.sidebar:
     # ========================================================================
     # SECCIÓN 3: ÍNDICES ESPECTRALES
     # ========================================================================
-    if st.session_state.landsat_data is not None:
+    if MODULES_LOADED and st.session_state.landsat_data is not None:
         with st.expander("🔥 SPECTRAL INDICES", expanded=False):
             st.markdown("### Calculate Indices")
             
@@ -535,7 +563,8 @@ with st.sidebar:
     # ========================================================================
     # SECCIÓN 4: MAGNETOMETRÍA
     # ========================================================================
-    with st.expander("🧲 MAGNETOMETRY", expanded=False):
+    if MODULES_LOADED:
+        with st.expander("🧲 MAGNETOMETRY", expanded=False):
         st.markdown("### Load Magnetic Data")
         
         # Botón para limpiar datos viejos
