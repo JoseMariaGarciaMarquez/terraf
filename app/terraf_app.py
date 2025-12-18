@@ -390,6 +390,9 @@ with st.sidebar:
                             st.session_state.landsat_scene_name = selected_scene
                             st.success(f"✅ Loaded {len(pr.bandas)} bands")
                             
+                            # Activar capa RGB Natural automáticamente
+                            st.session_state.active_layers['rgb_natural'] = True
+                            
                             # Limpiar flag de bounds para recentrar
                             if 'landsat_bounds_calculated' in st.session_state:
                                 del st.session_state['landsat_bounds_calculated']
@@ -440,6 +443,9 @@ with st.sidebar:
                             st.session_state.landsat_data = pr
                             st.session_state.landsat_scene_name = "Uploaded Scene"
                             st.success(f"✅ Loaded {len(pr.bandas)} bands from uploaded files")
+                            
+                            # Activar capa RGB Natural automáticamente
+                            st.session_state.active_layers['rgb_natural'] = True
                             
                             # Limpiar flag de bounds para recentrar
                             if 'landsat_bounds_calculated' in st.session_state:
@@ -547,6 +553,9 @@ with st.sidebar:
                                 # Crear TerrafMag
                                 mag = TerrafMag(dataframe=df)
                                 mag._detectar_columnas()
+                                
+                                # Activar capa de magnetometría automáticamente
+                                st.session_state.active_layers['magnetometry'] = True
                                 
                                 # Extraer coordenadas de geometrías para cache
                                 from shapely.geometry import shape
@@ -681,6 +690,8 @@ with st.sidebar:
                                     'df': df,
                                     'crs': crs_info
                                 }
+                                # Activar capa de magnetometría automáticamente
+                                st.session_state.active_layers['magnetometry'] = True
                                 st.success(f"✅ {len(features)} features loaded from upload | Campo: {mag.campo_total.min():.1f} - {mag.campo_total.max():.1f} nT")
                                 st.rerun()
                                 
@@ -1316,6 +1327,8 @@ with col_inspector:
                                                 pr.cargar_bandas(reducir=True, factor=4)
                                                 st.session_state.landsat_data = pr
                                                 st.session_state.landsat_scene_name = selected_scene['id']
+                                                # Activar capa RGB Natural automáticamente
+                                                st.session_state.active_layers['rgb_natural'] = True
                                                 st.success("✅ Scene loaded and ready!")
                                                 st.rerun()
                                     else:
